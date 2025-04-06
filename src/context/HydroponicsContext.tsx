@@ -141,12 +141,13 @@ const defaultDevices: DeviceStatus[] = [
 const HydroponicsContext = createContext<HydroponicsContextType | undefined>(undefined);
 
 export const HydroponicsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Fix the initial state to properly type the status field for all sensors
   const [sensors, setSensors] = useState({
-    airTemp: { value: 23.5, unit: "°C", status: "normal" as const },
-    waterTemp: { value: 21.2, unit: "°C", status: "normal" as const },
-    humidity: { value: 65, unit: "%", status: "normal" as const },
-    ph: { value: 6.1, unit: "pH", status: "normal" as const },
-    tds: { value: 750, unit: "ppm", status: "normal" as const },
+    airTemp: { value: 23.5, unit: "°C", status: "normal" as const satisfies "normal" | "warning" | "critical" },
+    waterTemp: { value: 21.2, unit: "°C", status: "normal" as const satisfies "normal" | "warning" | "critical" },
+    humidity: { value: 65, unit: "%", status: "normal" as const satisfies "normal" | "warning" | "critical" },
+    ph: { value: 6.1, unit: "pH", status: "normal" as const satisfies "normal" | "warning" | "critical" },
+    tds: { value: 750, unit: "ppm", status: "normal" as const satisfies "normal" | "warning" | "critical" },
   });
   
   const [devices, setDevices] = useState<DeviceStatus[]>(defaultDevices);
