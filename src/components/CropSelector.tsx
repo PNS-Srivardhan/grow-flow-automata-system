@@ -2,11 +2,11 @@
 import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CropConfig } from '@/context/HydroponicsContext';
+import { Crop } from '@/services/supabaseService';
 
 interface CropSelectorProps {
-  crops: CropConfig[];
-  currentCrop: CropConfig | null;
+  crops: Crop[];
+  currentCrop: Crop | null;
   onCropChange: (cropId: string) => void;
 }
 

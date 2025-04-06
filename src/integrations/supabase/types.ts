@@ -9,7 +9,138 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      alerts: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          sensor_type: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          sensor_type: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          sensor_type?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      crops: {
+        Row: {
+          created_at: string
+          id: string
+          max_air_temp: number
+          max_humidity: number
+          max_ph: number
+          max_tds: number
+          max_water_temp: number
+          min_air_temp: number
+          min_humidity: number
+          min_ph: number
+          min_tds: number
+          min_water_temp: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_air_temp: number
+          max_humidity: number
+          max_ph: number
+          max_tds: number
+          max_water_temp: number
+          min_air_temp: number
+          min_humidity: number
+          min_ph: number
+          min_tds: number
+          min_water_temp: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_air_temp?: number
+          max_humidity?: number
+          max_ph?: number
+          max_tds?: number
+          max_water_temp?: number
+          min_air_temp?: number
+          min_humidity?: number
+          min_ph?: number
+          min_tds?: number
+          min_water_temp?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      devices: {
+        Row: {
+          device_type: string
+          id: string
+          is_on: boolean | null
+          last_updated: string
+          name: string
+        }
+        Insert: {
+          device_type: string
+          id?: string
+          is_on?: boolean | null
+          last_updated?: string
+          name: string
+        }
+        Update: {
+          device_type?: string
+          id?: string
+          is_on?: boolean | null
+          last_updated?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      sensor_readings: {
+        Row: {
+          air_temp: number
+          created_at: string
+          humidity: number
+          id: string
+          ph: number
+          status: Json
+          tds: number
+          water_temp: number
+        }
+        Insert: {
+          air_temp: number
+          created_at?: string
+          humidity: number
+          id?: string
+          ph: number
+          status: Json
+          tds: number
+          water_temp: number
+        }
+        Update: {
+          air_temp?: number
+          created_at?: string
+          humidity?: number
+          id?: string
+          ph?: number
+          status?: Json
+          tds?: number
+          water_temp?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -4,19 +4,57 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CropConfig } from '@/context/HydroponicsContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface CropSettingsProps {
-  crop: CropConfig | null;
-  onUpdate: (config: CropConfig) => void;
+interface CropConfigProps {
+  id: string;
+  name: string;
+  minAirTemp: number;
+  maxAirTemp: number;
+  minWaterTemp: number;
+  maxWaterTemp: number;
+  minHumidity: number;
+  maxHumidity: number;
+  minPH: number;
+  maxPH: number;
+  minTDS: number;
+  maxTDS: number;
 }
 
-const CropSettings = ({ crop, onUpdate }: CropSettingsProps) => {
-  const [config, setConfig] = useState<CropConfig | null>(crop);
+interface CropSettingsProps {
+  crop: CropConfigProps;
+  onUpdate: (config: CropConfigProps) => void;
+  isLoading?: boolean;
+}
+
+const CropSettings = ({ crop, onUpdate, isLoading = false }: CropSettingsProps) => {
+  const [config, setConfig] = useState<CropConfigProps | null>(crop);
 
   useEffect(() => {
     setConfig(crop);
   }, [crop]);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Crop Settings</CardTitle>
+          <CardDescription>Loading crop settings...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+          <Skeleton className="h-10 w-full mt-4" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!config) {
     return (

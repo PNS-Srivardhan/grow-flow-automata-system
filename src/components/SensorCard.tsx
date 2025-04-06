@@ -3,16 +3,23 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Droplet, Thermometer, Wind, Zap } from "lucide-react";
 import { cn } from '@/lib/utils';
-import { SensorReading } from '@/context/HydroponicsContext';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface SensorReading {
+  value: number;
+  unit: string;
+  status: "normal" | "warning" | "critical";
+}
 
 interface SensorCardProps {
   title: string;
   reading: SensorReading;
   type: 'temperature' | 'water' | 'humidity' | 'ph' | 'tds';
   className?: string;
+  isLoading?: boolean;
 }
 
-const SensorCard = ({ title, reading, type, className }: SensorCardProps) => {
+const SensorCard = ({ title, reading, type, className, isLoading = false }: SensorCardProps) => {
   const getIcon = () => {
     switch (type) {
       case 'temperature':
@@ -48,6 +55,22 @@ const SensorCard = ({ title, reading, type, className }: SensorCardProps) => {
         return 'border-hydroponics-critical';
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium">
+            {title}
+          </CardTitle>
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-8 w-24" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={cn("transition-all", 

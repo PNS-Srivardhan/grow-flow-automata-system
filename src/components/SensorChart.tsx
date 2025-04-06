@@ -1,18 +1,28 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { HistoricalData } from '@/context/HydroponicsContext';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface HistoricalDataPoint {
+  timestamp: Date;
+  airTemp: number;
+  waterTemp: number;
+  humidity: number;
+  ph: number;
+  tds: number;
+}
 
 interface SensorChartProps {
-  data: HistoricalData[];
+  data: HistoricalDataPoint[];
   sensorType: 'airTemp' | 'waterTemp' | 'humidity' | 'ph' | 'tds';
   title: string;
   color: string;
+  isLoading?: boolean;
 }
 
-const SensorChart = ({ data, sensorType, title, color }: SensorChartProps) => {
+const SensorChart = ({ data, sensorType, title, color, isLoading = false }: SensorChartProps) => {
   const formatData = () => {
     return data.map(item => ({
       time: format(new Date(item.timestamp), 'HH:mm'),
@@ -63,6 +73,19 @@ const SensorChart = ({ data, sensorType, title, color }: SensorChartProps) => {
         return [500, 1800];
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card className="w-full h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-4">
+          <Skeleton className="h-[200px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full h-full">

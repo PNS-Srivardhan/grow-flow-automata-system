@@ -1,1 +1,5 @@
+
 project_id = "lstmfefngokizyxqpbdo"
+
+[functions.add-sensor-reading]
+verify_jwt = false

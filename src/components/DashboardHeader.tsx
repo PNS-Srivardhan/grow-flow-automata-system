@@ -2,15 +2,17 @@
 import React from 'react';
 import { Leaf } from 'lucide-react';
 import CropSelector from './CropSelector';
-import { CropConfig } from '@/context/HydroponicsContext';
+import { Crop } from '@/services/supabaseService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardHeaderProps {
-  crops: CropConfig[];
-  currentCrop: CropConfig | null;
+  crops: Crop[];
+  currentCrop: Crop | null;
   onCropChange: (cropId: string) => void;
+  isLoading?: boolean;
 }
 
-const DashboardHeader = ({ crops, currentCrop, onCropChange }: DashboardHeaderProps) => {
+const DashboardHeader = ({ crops, currentCrop, onCropChange, isLoading = false }: DashboardHeaderProps) => {
   return (
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6">
       <div className="flex items-center">
@@ -23,11 +25,15 @@ const DashboardHeader = ({ crops, currentCrop, onCropChange }: DashboardHeaderPr
         </div>
       </div>
       <div className="w-full md:w-48">
-        <CropSelector 
-          crops={crops} 
-          currentCrop={currentCrop} 
-          onCropChange={onCropChange} 
-        />
+        {isLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : (
+          <CropSelector 
+            crops={crops} 
+            currentCrop={currentCrop} 
+            onCropChange={onCropChange} 
+          />
+        )}
       </div>
     </div>
   );
