@@ -62,7 +62,7 @@ serve(async (req) => {
 
     // Use the first crop to determine status (default)
     if (crops && crops.length > 0) {
-      const crop = crops[5];
+      const crop = crops[0];
       
       // Determine status for each reading
       const getStatus = (value, min, max) => {
