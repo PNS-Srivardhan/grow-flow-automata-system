@@ -33,12 +33,18 @@ serve(async (req) => {
     const { air_temp, water_temp, humidity, ph, tds } = requestData;
 
     // Validate the request data
-    if (!air_temp || !water_temp || !humidity || !ph || !tds) {
+    if (
+      air_temp === undefined || air_temp === null ||
+      water_temp === undefined || water_temp === null ||
+      humidity === undefined || humidity === null ||
+      ph === undefined || ph === null ||
+      tds === undefined || tds === null
+    ) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
-    }
+    }    
 
     // Query crops to determine status
     const { data: crops } = await supabaseClient
