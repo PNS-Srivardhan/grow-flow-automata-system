@@ -42,7 +42,7 @@ const char* password = "YOUR_WIFI_PASSWORD";
 const char* serverUrl = "https://lstmfefngokizyxqpbdo.supabase.co/functions/v1/add-sensor-reading";
 
 // Crop ID from your dashboard (ensures comparing with the correct crop thresholds)
-const char* cropId = "lettuce";  // Change to match the ID of your selected crop
+const char* cropId = "YOUR_CROP_ID";  // Change to match the ID of your selected crop
 
 // Sensor pins
 #define ONE_WIRE_BUS 4          // DS18B20 temperature sensors (water temp)
@@ -243,7 +243,7 @@ void sendSensorData(float airTemp, float waterTemp, float humidity, float ph, fl
   "humidity": 65,
   "ph": 6.2,
   "tds": 750,
-  "crop_id": "lettuce"  // Optional: ID of the crop to use for threshold comparison
+  "crop_id": "YOUR_CROP_ID"  // Optional: ID of the crop to use for threshold comparison
 }
 `} />
               
@@ -264,7 +264,8 @@ void sendSensorData(float airTemp, float waterTemp, float humidity, float ph, fl
       "ph": "normal",
       "tds": "normal"
     },
-    "created_at": "2025-04-06T12:00:00.000Z"
+    "created_at": "2025-04-06T12:00:00.000Z",
+    "crop_id": "YOUR_CROP_ID"
   },
   "status": "success"
 }

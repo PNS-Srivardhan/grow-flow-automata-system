@@ -1,4 +1,3 @@
-
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -48,7 +47,21 @@ const AddCropForm = () => {
   });
 
   const onSubmit = (values: CropFormValues) => {
-    addCrop.mutate(values, {
+    const cropData = {
+      name: values.name,
+      min_air_temp: values.min_air_temp,
+      max_air_temp: values.max_air_temp,
+      min_water_temp: values.min_water_temp,
+      max_water_temp: values.max_water_temp,
+      min_humidity: values.min_humidity,
+      max_humidity: values.max_humidity,
+      min_ph: values.min_ph,
+      max_ph: values.max_ph,
+      min_tds: values.min_tds,
+      max_tds: values.max_tds,
+    };
+    
+    addCrop.mutate(cropData, {
       onSuccess: () => {
         setOpen(false);
         form.reset();

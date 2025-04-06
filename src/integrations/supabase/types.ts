@@ -112,6 +112,7 @@ export type Database = {
         Row: {
           air_temp: number
           created_at: string
+          crop_id: string | null
           humidity: number
           id: string
           ph: number
@@ -122,6 +123,7 @@ export type Database = {
         Insert: {
           air_temp: number
           created_at?: string
+          crop_id?: string | null
           humidity: number
           id?: string
           ph: number
@@ -132,6 +134,7 @@ export type Database = {
         Update: {
           air_temp?: number
           created_at?: string
+          crop_id?: string | null
           humidity?: number
           id?: string
           ph?: number
@@ -139,7 +142,15 @@ export type Database = {
           tds?: number
           water_temp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sensor_readings_crop_id_fkey"
+            columns: ["crop_id"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

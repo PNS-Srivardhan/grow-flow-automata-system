@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SensorCard from '@/components/SensorCard';
@@ -57,24 +56,20 @@ const Dashboard = () => {
   const [isConnected, setIsConnected] = React.useState(true);
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
 
-  // Initialize current crop once data is loaded
   useEffect(() => {
     if (crops.length > 0 && !currentCropId) {
       setCurrentCropId(crops[0].id);
     }
   }, [crops, currentCropId]);
 
-  // Get the current crop object
   const currentCrop = React.useMemo(() => {
     return crops.find(crop => crop.id === currentCropId) || null;
   }, [crops, currentCropId]);
 
-  // Format latest reading for display
   const formatSensorReading = (value: number, unit: string, status: "normal" | "warning" | "critical"): { value: number, unit: string, status: "normal" | "warning" | "critical" } => {
     return { value, unit, status };
   };
 
-  // Format sensors data
   const sensors = React.useMemo(() => {
     if (!latestReading) {
       return {
@@ -95,7 +90,6 @@ const Dashboard = () => {
     };
   }, [latestReading]);
 
-  // Format historical data for charts
   const formattedHistoricalData = React.useMemo(() => {
     return historicalData.map(reading => ({
       timestamp: new Date(reading.created_at),
@@ -107,9 +101,7 @@ const Dashboard = () => {
     })).reverse();
   }, [historicalData]);
 
-  // Set up real-time subscriptions
   useEffect(() => {
-    // Subscribe to new sensor readings
     const unsubscribeSensor = subscribeToSensorUpdates((payload) => {
       setLastUpdated(new Date());
       if (payload.new) {
@@ -120,7 +112,6 @@ const Dashboard = () => {
       }
     });
 
-    // Subscribe to device updates
     const unsubscribeDevice = subscribeToDeviceUpdates((payload) => {
       if (payload.new) {
         toast({
@@ -130,7 +121,6 @@ const Dashboard = () => {
       }
     });
 
-    // Subscribe to new alerts
     const unsubscribeAlert = subscribeToAlertUpdates((payload) => {
       if (payload.new && payload.new.type === 'critical') {
         toast({
@@ -141,7 +131,6 @@ const Dashboard = () => {
       }
     });
 
-    // Simulate occasional connection issues
     const connectionInterval = setInterval(() => {
       if (Math.random() > 0.95) {
         setIsConnected(false);
@@ -157,22 +146,18 @@ const Dashboard = () => {
     };
   }, [toast]);
 
-  // Handle device toggle
   const handleToggleDevice = (id: string) => {
     toggleDevice.mutate(id);
   };
 
-  // Handle crop update
   const handleUpdateCrop = (config: any) => {
     updateCrop.mutate(config);
   };
 
-  // Handle alert dismiss
   const handleDismissAlert = (id: string) => {
     dismissAlert.mutate(id);
   };
 
-  // Mark all alerts as read
   const handleMarkAllAlertsRead = () => {
     markAllAsRead.mutate();
   };
@@ -194,12 +179,10 @@ const Dashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Generate Data Button for Testing */}
           <div className="flex justify-end">
             <GenerateDataButton />
           </div>
           
-          {/* Sensor Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
             <SensorCard 
               title="Air Temperature" 
@@ -233,7 +216,6 @@ const Dashboard = () => {
             />
           </div>
 
-          {/* Status and Thresholds */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SystemStatus isConnected={isConnected} lastUpdated={lastUpdated} />
@@ -250,13 +232,11 @@ const Dashboard = () => {
                     type: mapDeviceType(device.device_type)
                   }}
                   onToggle={handleToggleDevice}
-                  isLoading={isLoadingDevices || toggleDevice.isPending}
                 />
               ))}
             </div>
           </div>
 
-          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <SensorChart 
@@ -292,7 +272,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Alerts */}
           <div>
             <AlertDisplay 
               alerts={alerts.map(alert => ({
@@ -321,7 +300,6 @@ const Dashboard = () => {
                   type: mapDeviceType(device.device_type)
                 }}
                 onToggle={handleToggleDevice}
-                isLoading={isLoadingDevices || toggleDevice.isPending}
               />
             ))}
           </div>
