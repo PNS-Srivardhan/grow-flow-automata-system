@@ -81,7 +81,7 @@ export const useLatestSensorReading = () => {
         .limit(1);
       
       if (error) throw error;
-      return data[0] as SensorReading;
+      return data && data.length > 0 ? data[0] as SensorReading : null;
     },
     refetchInterval: 2000, // Poll every 2 seconds
   });
@@ -138,19 +138,19 @@ export const useToggleDevice = () => {
       // Toggle the state
       const { data, error } = await supabase
         .from('devices')
-        .update({ is_on: !device.is_on, last_updated: new Date().toISOString() })
+        .update({ is_on: !device?.is_on, last_updated: new Date().toISOString() })
         .eq('id', deviceId)
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Device;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       toast({
         title: "Device Updated",
-        description: `${data.name} is now ${data.is_on ? 'on' : 'off'}`,
+        description: `${data?.name} is now ${data?.is_on ? 'on' : 'off'}`,
       });
     },
     onError: (error) => {
@@ -194,7 +194,7 @@ export const useDismissAlert = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Alert;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
@@ -215,7 +215,7 @@ export const useMarkAllAlertsRead = () => {
         .select();
       
       if (error) throw error;
-      return data;
+      return data as Alert[];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
@@ -250,13 +250,13 @@ export const useUpdateCrop = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Crop;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['crops'] });
       toast({
         title: "Crop Updated",
-        description: `${data.name} settings have been updated`,
+        description: `${data?.name} settings have been updated`,
       });
     },
     onError: (error) => {
@@ -275,34 +275,24 @@ export const useAddCrop = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  type NewCrop = Omit<Crop, 'id'>;
+  
   return useMutation({
-    mutationFn: async (crop: Omit<Crop, 'id'>) => {
+    mutationFn: async (crop: NewCrop) => {
       const { data, error } = await supabase
         .from('crops')
-        .insert({
-          name: crop.name,
-          min_air_temp: crop.min_air_temp,
-          max_air_temp: crop.max_air_temp,
-          min_water_temp: crop.min_water_temp,
-          max_water_temp: crop.max_water_temp,
-          min_humidity: crop.min_humidity,
-          max_humidity: crop.max_humidity,
-          min_ph: crop.min_ph,
-          max_ph: crop.max_ph,
-          min_tds: crop.min_tds,
-          max_tds: crop.max_tds,
-        })
+        .insert(crop)
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Crop;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['crops'] });
       toast({
         title: "Crop Added",
-        description: `${data.name} has been added to the database`,
+        description: `${data?.name} has been added to the database`,
       });
     },
     onError: (error) => {
@@ -320,23 +310,31 @@ export const useAddCrop = () => {
 export const useAddSensorReading = () => {
   const queryClient = useQueryClient();
   
+  type NewSensorReading = {
+    air_temp: number;
+    water_temp: number;
+    humidity: number;
+    ph: number;
+    tds: number;
+    status: {
+      airTemp: "normal" | "warning" | "critical";
+      waterTemp: "normal" | "warning" | "critical";
+      humidity: "normal" | "warning" | "critical";
+      ph: "normal" | "warning" | "critical";
+      tds: "normal" | "warning" | "critical";
+    };
+  };
+  
   return useMutation({
-    mutationFn: async (reading: Omit<SensorReading, 'id' | 'created_at'>) => {
+    mutationFn: async (reading: NewSensorReading) => {
       const { data, error } = await supabase
         .from('sensor_readings')
-        .insert({
-          air_temp: reading.air_temp,
-          water_temp: reading.water_temp,
-          humidity: reading.humidity,
-          ph: reading.ph,
-          tds: reading.tds,
-          status: reading.status,
-        })
+        .insert(reading)
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as SensorReading;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sensorReading', 'latest'] });

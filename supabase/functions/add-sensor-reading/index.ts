@@ -148,22 +148,47 @@ serve(async (req) => {
     const autoControlDevices = async () => {
       try {
         // Example: Turn on heater if water temperature is too low
-        if (water_temp < crops[0].min_water_temp) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: true, last_updated: new Date().toISOString() })
-            .eq('device_type', 'heater');
+        if (crops && crops.length > 0) {
+          const crop = crops[0];
+          
+          if (water_temp < crop.min_water_temp) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: true, last_updated: new Date().toISOString() })
+              .eq('device_type', 'heater');
+          } else if (water_temp > crop.max_water_temp) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: false, last_updated: new Date().toISOString() })
+              .eq('device_type', 'heater');
+          }
+          
+          // Example: Turn on humidifier if humidity is too low
+          if (humidity < crop.min_humidity) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: true, last_updated: new Date().toISOString() })
+              .eq('device_type', 'humidifier');
+          } else if (humidity > crop.max_humidity) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: false, last_updated: new Date().toISOString() })
+              .eq('device_type', 'humidifier');
+          }
+          
+          // Turn on fans if air temperature is too high
+          if (air_temp > crop.max_air_temp) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: true, last_updated: new Date().toISOString() })
+              .eq('device_type', 'fan');
+          } else if (air_temp < crop.min_air_temp) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: false, last_updated: new Date().toISOString() })
+              .eq('device_type', 'fan');
+          }
         }
-        
-        // Example: Turn on humidifier if humidity is too low
-        if (humidity < crops[0].min_humidity) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: true, last_updated: new Date().toISOString() })
-            .eq('device_type', 'humidifier');
-        }
-        
-        // More control logic can be added here...
       } catch (error) {
         console.error('Error in auto-control devices:', error);
       }
