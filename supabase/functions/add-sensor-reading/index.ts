@@ -30,9 +30,9 @@ serve(async (req) => {
 
     // Parse the request body
     const requestData = await req.json()
-    const { air_temp, water_temp, humidity, ph, tds } = requestData;
+    const { air_temp, water_temp, humidity, ph, tds, crop_id } = requestData;
 
-    // Validate the request data
+    // Validate the required sensor data
     if (
       air_temp === undefined || air_temp === null ||
       water_temp === undefined || water_temp === null ||
@@ -41,16 +41,32 @@ serve(async (req) => {
       tds === undefined || tds === null
     ) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required sensor fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }    
 
-    // Query crops to determine status
-    const { data: crops } = await supabaseClient
-      .from('crops')
-      .select('*')
+    // Query the selected crop or the default (first) crop
+    let cropQuery = supabaseClient.from('crops').select('*');
+    
+    // If a specific crop_id was provided, use that one
+    if (crop_id) {
+      cropQuery = cropQuery.eq('id', crop_id);
+    }
+    
+    const { data: crops } = await cropQuery.limit(1);
 
+    // Ensure we have at least one crop to compare against
+    if (!crops || crops.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'No crops found for threshold comparison' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Use the first crop to determine status
+    const crop = crops[0];
+    
     // Determine status based on reading values and crop thresholds
     let status = {
       airTemp: "normal",
@@ -60,79 +76,75 @@ serve(async (req) => {
       tds: "normal"
     };
 
-    // Use the first crop to determine status (default)
-    if (crops && crops.length > 0) {
-      const crop = crops[0];
-      
-      // Determine status for each reading
-      const getStatus = (value, min, max) => {
-        if (value < min - (min * 0.1) || value > max + (max * 0.1)) return "critical";
-        if (value < min || value > max) return "warning";
-        return "normal";
-      };
+    // Helper function to determine status
+    const getStatus = (value, min, max) => {
+      if (value < min - (min * 0.1) || value > max + (max * 0.1)) return "critical";
+      if (value < min || value > max) return "warning";
+      return "normal";
+    };
 
-      status = {
-        airTemp: getStatus(air_temp, crop.min_air_temp, crop.max_air_temp),
-        waterTemp: getStatus(water_temp, crop.min_water_temp, crop.max_water_temp),
-        humidity: getStatus(humidity, crop.min_humidity, crop.max_humidity),
-        ph: getStatus(ph, crop.min_ph, crop.max_ph),
-        tds: getStatus(tds, crop.min_tds, crop.max_tds)
-      };
+    // Determine status for each reading
+    status = {
+      airTemp: getStatus(air_temp, crop.min_air_temp, crop.max_air_temp),
+      waterTemp: getStatus(water_temp, crop.min_water_temp, crop.max_water_temp),
+      humidity: getStatus(humidity, crop.min_humidity, crop.max_humidity),
+      ph: getStatus(ph, crop.min_ph, crop.max_ph),
+      tds: getStatus(tds, crop.min_tds, crop.max_tds)
+    };
 
-      // Create alerts for non-normal conditions
-      const createAlerts = async () => {
-        const alerts = [];
-        
-        if (status.airTemp !== "normal") {
-          alerts.push({
-            message: `Air temperature (${air_temp}°C) ${status.airTemp === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
-            sensor_type: "airTemp",
-            type: status.airTemp
-          });
-        }
-        
-        if (status.waterTemp !== "normal") {
-          alerts.push({
-            message: `Water temperature (${water_temp}°C) ${status.waterTemp === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
-            sensor_type: "waterTemp",
-            type: status.waterTemp
-          });
-        }
-        
-        if (status.humidity !== "normal") {
-          alerts.push({
-            message: `Humidity (${humidity}%) ${status.humidity === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
-            sensor_type: "humidity",
-            type: status.humidity
-          });
-        }
-        
-        if (status.ph !== "normal") {
-          alerts.push({
-            message: `pH level (${ph}) ${status.ph === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
-            sensor_type: "ph",
-            type: status.ph
-          });
-        }
-        
-        if (status.tds !== "normal") {
-          alerts.push({
-            message: `Nutrient level (${tds}ppm) ${status.tds === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
-            sensor_type: "tds",
-            type: status.tds
-          });
-        }
-        
-        // Create alerts in the database
-        if (alerts.length > 0) {
-          const { error } = await supabaseClient.from('alerts').insert(alerts);
-          if (error) console.error('Error creating alerts:', error);
-        }
-      };
+    // Create alerts for non-normal conditions
+    const createAlerts = async () => {
+      const alerts = [];
       
-      // Create alerts in the background
-      createAlerts();
-    }
+      if (status.airTemp !== "normal") {
+        alerts.push({
+          message: `Air temperature (${air_temp}°C) ${status.airTemp === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
+          sensor_type: "airTemp",
+          type: status.airTemp
+        });
+      }
+      
+      if (status.waterTemp !== "normal") {
+        alerts.push({
+          message: `Water temperature (${water_temp}°C) ${status.waterTemp === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
+          sensor_type: "waterTemp",
+          type: status.waterTemp
+        });
+      }
+      
+      if (status.humidity !== "normal") {
+        alerts.push({
+          message: `Humidity (${humidity}%) ${status.humidity === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
+          sensor_type: "humidity",
+          type: status.humidity
+        });
+      }
+      
+      if (status.ph !== "normal") {
+        alerts.push({
+          message: `pH level (${ph}) ${status.ph === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
+          sensor_type: "ph",
+          type: status.ph
+        });
+      }
+      
+      if (status.tds !== "normal") {
+        alerts.push({
+          message: `Nutrient level (${tds}ppm) ${status.tds === "warning" ? "approaching" : "exceeds"} limits for ${crop.name}`,
+          sensor_type: "tds",
+          type: status.tds
+        });
+      }
+      
+      // Create alerts in the database
+      if (alerts.length > 0) {
+        const { error } = await supabaseClient.from('alerts').insert(alerts);
+        if (error) console.error('Error creating alerts:', error);
+      }
+    };
+    
+    // Create alerts in the background
+    createAlerts();
 
     // Insert the reading into the database
     const { data, error } = await supabaseClient
@@ -143,7 +155,8 @@ serve(async (req) => {
         humidity,
         ph,
         tds,
-        status
+        status,
+        crop_id: crop_id || crop.id, // Store which crop was used for threshold comparisons
       })
       .select()
       .single()
@@ -154,46 +167,42 @@ serve(async (req) => {
     const autoControlDevices = async () => {
       try {
         // Example: Turn on heater if water temperature is too low
-        if (crops && crops.length > 0) {
-          const crop = crops[0];
-          
-          if (water_temp < crop.min_water_temp) {
-            await supabaseClient
-              .from('devices')
-              .update({ is_on: true, last_updated: new Date().toISOString() })
-              .eq('device_type', 'heater');
-          } else if (water_temp > crop.max_water_temp) {
-            await supabaseClient
-              .from('devices')
-              .update({ is_on: false, last_updated: new Date().toISOString() })
-              .eq('device_type', 'heater');
-          }
-          
-          // Example: Turn on humidifier if humidity is too low
-          if (humidity < crop.min_humidity) {
-            await supabaseClient
-              .from('devices')
-              .update({ is_on: true, last_updated: new Date().toISOString() })
-              .eq('device_type', 'humidifier');
-          } else if (humidity > crop.max_humidity) {
-            await supabaseClient
-              .from('devices')
-              .update({ is_on: false, last_updated: new Date().toISOString() })
-              .eq('device_type', 'humidifier');
-          }
-          
-          // Turn on fans if air temperature is too high
-          if (air_temp > crop.max_air_temp) {
-            await supabaseClient
-              .from('devices')
-              .update({ is_on: true, last_updated: new Date().toISOString() })
-              .eq('device_type', 'fan');
-          } else if (air_temp < crop.min_air_temp) {
-            await supabaseClient
-              .from('devices')
-              .update({ is_on: false, last_updated: new Date().toISOString() })
-              .eq('device_type', 'fan');
-          }
+        if (water_temp < crop.min_water_temp) {
+          await supabaseClient
+            .from('devices')
+            .update({ is_on: true, last_updated: new Date().toISOString() })
+            .eq('device_type', 'heater');
+        } else if (water_temp > crop.max_water_temp) {
+          await supabaseClient
+            .from('devices')
+            .update({ is_on: false, last_updated: new Date().toISOString() })
+            .eq('device_type', 'heater');
+        }
+        
+        // Example: Turn on humidifier if humidity is too low
+        if (humidity < crop.min_humidity) {
+          await supabaseClient
+            .from('devices')
+            .update({ is_on: true, last_updated: new Date().toISOString() })
+            .eq('device_type', 'humidifier');
+        } else if (humidity > crop.max_humidity) {
+          await supabaseClient
+            .from('devices')
+            .update({ is_on: false, last_updated: new Date().toISOString() })
+            .eq('device_type', 'humidifier');
+        }
+        
+        // Turn on fans if air temperature is too high
+        if (air_temp > crop.max_air_temp) {
+          await supabaseClient
+            .from('devices')
+            .update({ is_on: true, last_updated: new Date().toISOString() })
+            .eq('device_type', 'fan');
+        } else if (air_temp < crop.min_air_temp) {
+          await supabaseClient
+            .from('devices')
+            .update({ is_on: false, last_updated: new Date().toISOString() })
+            .eq('device_type', 'fan');
         }
       } catch (error) {
         console.error('Error in auto-control devices:', error);

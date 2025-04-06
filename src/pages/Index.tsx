@@ -29,6 +29,18 @@ import {
   subscribeToAlertUpdates
 } from '@/services/supabaseService';
 
+// Mapping for device types to ensure compatibility with DeviceStatus type
+const mapDeviceType = (deviceType: string): "pump" | "fan" | "heater" | "humidifier" | "light" | "other" => {
+  switch (deviceType) {
+    case "pump": return "pump";
+    case "fan": return "fan";
+    case "heater": return "heater";
+    case "humidifier": return "humidifier";
+    case "light": return "light";
+    default: return "other";
+  }
+};
+
 const Dashboard = () => {
   const { toast } = useToast();
   const { data: crops = [], isLoading: isLoadingCrops } = useCrops();
@@ -235,7 +247,7 @@ const Dashboard = () => {
                     id: device.id,
                     name: device.name,
                     isOn: device.is_on,
-                    type: device.device_type
+                    type: mapDeviceType(device.device_type)
                   }}
                   onToggle={handleToggleDevice}
                   isLoading={isLoadingDevices || toggleDevice.isPending}
@@ -288,12 +300,11 @@ const Dashboard = () => {
                 message: alert.message,
                 timestamp: new Date(alert.created_at),
                 type: alert.type as "warning" | "critical",
-                sensorType: alert.sensor_type as any,
+                sensorType: alert.sensor_type as "airTemp" | "waterTemp" | "humidity" | "ph" | "tds",
                 isRead: alert.is_read
               }))} 
               onDismiss={handleDismissAlert} 
               onMarkAllAsRead={handleMarkAllAlertsRead}
-              isLoading={isLoadingAlerts}
             />
           </div>
         </TabsContent>
@@ -307,7 +318,7 @@ const Dashboard = () => {
                   id: device.id,
                   name: device.name,
                   isOn: device.is_on,
-                  type: device.device_type
+                  type: mapDeviceType(device.device_type)
                 }}
                 onToggle={handleToggleDevice}
                 isLoading={isLoadingDevices || toggleDevice.isPending}
@@ -379,12 +390,11 @@ const Dashboard = () => {
                   message: alert.message,
                   timestamp: new Date(alert.created_at),
                   type: alert.type as "warning" | "critical",
-                  sensorType: alert.sensor_type as any,
+                  sensorType: alert.sensor_type as "airTemp" | "waterTemp" | "humidity" | "ph" | "tds",
                   isRead: alert.is_read
                 }))} 
                 onDismiss={handleDismissAlert} 
                 onMarkAllAsRead={handleMarkAllAlertsRead}
-                isLoading={isLoadingAlerts}
               />
             </div>
           </div>

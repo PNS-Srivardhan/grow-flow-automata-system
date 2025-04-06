@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +16,7 @@ export type Crop = {
   max_ph: number;
   min_tds: number;
   max_tds: number;
+  created_at?: string;
 };
 
 export type Device = {
@@ -275,10 +275,8 @@ export const useAddCrop = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  type NewCrop = Omit<Crop, 'id'>;
-  
   return useMutation({
-    mutationFn: async (crop: NewCrop) => {
+    mutationFn: async (crop: Omit<Crop, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('crops')
         .insert(crop)
