@@ -166,43 +166,109 @@ serve(async (req) => {
     // Auto control devices based on readings
     const autoControlDevices = async () => {
       try {
-        // Example: Turn on heater if water temperature is too low
-        if (water_temp < crop.min_water_temp) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: true, last_updated: new Date().toISOString() })
-            .eq('device_type', 'heater');
-        } else if (water_temp > crop.max_water_temp) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: false, last_updated: new Date().toISOString() })
-            .eq('device_type', 'heater');
+        // Get all available devices
+        const { data: devices, error: devicesError } = await supabaseClient
+          .from('devices')
+          .select('*');
+        
+        if (devicesError) {
+          console.error('Error fetching devices:', devicesError);
+          return;
+        }
+
+        // Helper to find device by type
+        const findDevice = (type) => devices.find(d => d.device_type === type);
+        
+        // Control water heater based on water temperature
+        const heater = findDevice('heater');
+        if (heater) {
+          const shouldBeOn = water_temp < crop.min_water_temp;
+          if (heater.is_on !== shouldBeOn) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: shouldBeOn, last_updated: new Date().toISOString() })
+              .eq('id', heater.id);
+            console.log(`Water heater turned ${shouldBeOn ? 'ON' : 'OFF'} - water temp: ${water_temp}°C, threshold: ${crop.min_water_temp}°C`);
+          }
         }
         
-        // Example: Turn on humidifier if humidity is too low
-        if (humidity < crop.min_humidity) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: true, last_updated: new Date().toISOString() })
-            .eq('device_type', 'humidifier');
-        } else if (humidity > crop.max_humidity) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: false, last_updated: new Date().toISOString() })
-            .eq('device_type', 'humidifier');
+        // Control humidifier based on humidity level
+        const humidifier = findDevice('humidifier');
+        if (humidifier) {
+          const shouldBeOn = humidity < crop.min_humidity;
+          if (humidifier.is_on !== shouldBeOn) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: shouldBeOn, last_updated: new Date().toISOString() })
+              .eq('id', humidifier.id);
+            console.log(`Humidifier turned ${shouldBeOn ? 'ON' : 'OFF'} - humidity: ${humidity}%, threshold: ${crop.min_humidity}%`);
+          }
         }
         
-        // Turn on fans if air temperature is too high
-        if (air_temp > crop.max_air_temp) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: true, last_updated: new Date().toISOString() })
-            .eq('device_type', 'fan');
-        } else if (air_temp < crop.min_air_temp) {
-          await supabaseClient
-            .from('devices')
-            .update({ is_on: false, last_updated: new Date().toISOString() })
-            .eq('device_type', 'fan');
+        // Control fan based on air temperature
+        const fan = findDevice('fan');
+        if (fan) {
+          const shouldBeOn = air_temp > crop.max_air_temp;
+          if (fan.is_on !== shouldBeOn) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: shouldBeOn, last_updated: new Date().toISOString() })
+              .eq('id', fan.id);
+            console.log(`Fan turned ${shouldBeOn ? 'ON' : 'OFF'} - air temp: ${air_temp}°C, threshold: ${crop.max_air_temp}°C`);
+          }
+        }
+        
+        // Control nutrient pump based on TDS level
+        const nutrientPump = findDevice('pump');
+        if (nutrientPump) {
+          const shouldBeOn = tds < crop.min_tds;
+          if (nutrientPump.is_on !== shouldBeOn) {
+            await supabaseClient
+              .from('devices')
+              .update({ is_on: shouldBeOn, last_updated: new Date().toISOString() })
+              .eq('id', nutrientPump.id);
+            console.log(`Nutrient pump turned ${shouldBeOn ? 'ON' : 'OFF'} - TDS: ${tds}ppm, threshold: ${crop.min_tds}ppm`);
+          }
+        }
+        
+        // Control pH adjuster (if available)
+        const phAdjuster = findDevice('ph_adjuster');
+        if (phAdjuster) {
+          // Determine if pH is too high or too low
+          const pHIsTooLow = ph < crop.min_ph;
+          const pHIsTooHigh = ph > crop.max_ph;
+          const shouldBeOn = pHIsTooLow || pHIsTooHigh;
+          
+          if (phAdjuster.is_on !== shouldBeOn) {
+            await supabaseClient
+              .from('devices')
+              .update({ 
+                is_on: shouldBeOn, 
+                last_updated: new Date().toISOString() 
+              })
+              .eq('id', phAdjuster.id);
+            console.log(`pH adjuster turned ${shouldBeOn ? 'ON' : 'OFF'} - pH: ${ph}, thresholds: ${crop.min_ph}-${crop.max_ph}`);
+          }
+        }
+        
+        // Control lights based on time of day or schedule (simplified logic for now)
+        const light = findDevice('light');
+        if (light) {
+          // Get current hour
+          const currentHour = new Date().getHours();
+          // Example: lights on from 6am to 8pm (6-20)
+          const shouldBeOn = currentHour >= 6 && currentHour < 20;
+          
+          if (light.is_on !== shouldBeOn) {
+            await supabaseClient
+              .from('devices')
+              .update({ 
+                is_on: shouldBeOn, 
+                last_updated: new Date().toISOString() 
+              })
+              .eq('id', light.id);
+            console.log(`Lights turned ${shouldBeOn ? 'ON' : 'OFF'} - current hour: ${currentHour}`);
+          }
         }
       } catch (error) {
         console.error('Error in auto-control devices:', error);
