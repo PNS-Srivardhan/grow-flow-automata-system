@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-javascript';
@@ -22,6 +22,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   showCopyButton = true 
 }) => {
   const trimmedCode = code.trim();
+  const [copySuccess, setCopySuccess] = useState(false);
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -31,6 +32,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   
   const handleCopy = () => {
     navigator.clipboard.writeText(trimmedCode);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
   };
   
   return (
@@ -40,7 +43,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           onClick={handleCopy}
           className="absolute top-2 right-2 bg-hydroponics-teal/20 hover:bg-hydroponics-teal/30 text-hydroponics-teal text-xs py-1 px-2 rounded"
         >
-          Copy
+          {copySuccess ? "Copied!" : "Copy"}
         </button>
       )}
       <pre className="p-4 bg-muted rounded-md overflow-auto text-xs">

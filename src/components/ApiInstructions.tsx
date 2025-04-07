@@ -15,8 +15,9 @@ const ApiInstructions = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="arduino">
-          <TabsList className="grid grid-cols-2 mb-4">
+          <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="arduino">Arduino Code</TabsTrigger>
+            <TabsTrigger value="esp8266">ESP8266 Relay Control</TabsTrigger>
             <TabsTrigger value="api">API Reference</TabsTrigger>
           </TabsList>
           
@@ -222,6 +223,234 @@ void sendSensorData(float airTemp, float waterTemp, float humidity, float ph, fl
   }
 }
 `} />
+          </TabsContent>
+          
+          <TabsContent value="esp8266" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Use this ESP8266 code to control relays based on sensor readings. This code automatically 
+              turns devices on/off when readings go out of range.
+            </p>
+            
+            <CodeBlock language="cpp" code={`
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+#include <ArduinoJson.h>
+
+// WiFi credentials
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+// Supabase project URL
+const char* supabaseUrl = "https://lstmfefngokizyxqpbdo.supabase.co";
+const char* supabaseKey = "YOUR_SUPABASE_ANON_KEY"; // Get from Supabase dashboard
+
+// Device control relay pins
+#define HEATER_RELAY_PIN D1      // Water heater relay
+#define FAN_RELAY_PIN D2         // Fan relay
+#define HUMIDIFIER_RELAY_PIN D3  // Humidifier relay
+#define PUMP_RELAY_PIN D4        // Nutrient pump relay
+#define PH_RELAY_PIN D5          // pH adjuster relay
+#define LIGHT_RELAY_PIN D6       // Light relay
+
+// Device states
+bool heaterState = false;
+bool fanState = false;
+bool humidifierState = false;
+bool pumpState = false;
+bool phAdjusterState = false;
+bool lightState = false;
+
+// Time intervals
+const unsigned long CHECK_INTERVAL = 5000;  // Check device status every 5 seconds
+unsigned long lastCheckTime = 0;
+
+void setup() {
+  Serial.begin(115200);
+  delay(100);
+  
+  // Set relay pins as outputs and initialize to OFF (depends on your relay type)
+  pinMode(HEATER_RELAY_PIN, OUTPUT);
+  pinMode(FAN_RELAY_PIN, OUTPUT);
+  pinMode(HUMIDIFIER_RELAY_PIN, OUTPUT);
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+  pinMode(PH_RELAY_PIN, OUTPUT);
+  pinMode(LIGHT_RELAY_PIN, OUTPUT);
+  
+  // Initialize all relays to OFF (HIGH = OFF for most relay modules)
+  digitalWrite(HEATER_RELAY_PIN, HIGH);
+  digitalWrite(FAN_RELAY_PIN, HIGH);
+  digitalWrite(HUMIDIFIER_RELAY_PIN, HIGH);
+  digitalWrite(PUMP_RELAY_PIN, HIGH);
+  digitalWrite(PH_RELAY_PIN, HIGH);
+  digitalWrite(LIGHT_RELAY_PIN, HIGH);
+  
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+  Serial.println("Connecting to WiFi");
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+  
+  // Check device status at specified interval
+  if (currentMillis - lastCheckTime >= CHECK_INTERVAL) {
+    lastCheckTime = currentMillis;
+    
+    // Get device states from Supabase
+    checkDeviceStates();
+  }
+}
+
+void checkDeviceStates() {
+  if (WiFi.status() == WL_CONNECTED) {
+    WiFiClient client;
+    HTTPClient http;
+    
+    // Get device status from Supabase
+    String url = String(supabaseUrl) + "/rest/v1/devices?select=id,name,device_type,is_on";
+    
+    http.begin(client, url);
+    http.addHeader("apikey", supabaseKey);
+    http.addHeader("Authorization", "Bearer " + String(supabaseKey));
+    
+    int httpResponseCode = http.GET();
+    
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Devices HTTP Response code: " + String(httpResponseCode));
+      
+      // Parse JSON response
+      DynamicJsonDocument doc(2048);
+      DeserializationError error = deserializeJson(doc, response);
+      
+      if (error) {
+        Serial.print("JSON parsing failed: ");
+        Serial.println(error.c_str());
+      } else {
+        // Process each device
+        JsonArray devices = doc.as<JsonArray>();
+        
+        for (JsonObject device : devices) {
+          String deviceType = device["device_type"].as<String>();
+          bool isOn = device["is_on"].as<bool>();
+          String name = device["name"].as<String>();
+          
+          // Update relay states based on device types
+          if (deviceType == "heater") {
+            updateRelay(HEATER_RELAY_PIN, isOn, name, heaterState);
+            heaterState = isOn;
+          } 
+          else if (deviceType == "fan") {
+            updateRelay(FAN_RELAY_PIN, isOn, name, fanState);
+            fanState = isOn;
+          } 
+          else if (deviceType == "humidifier") {
+            updateRelay(HUMIDIFIER_RELAY_PIN, isOn, name, humidifierState);
+            humidifierState = isOn;
+          } 
+          else if (deviceType == "pump") {
+            updateRelay(PUMP_RELAY_PIN, isOn, name, pumpState);
+            pumpState = isOn;
+          } 
+          else if (deviceType == "ph_adjuster") {
+            updateRelay(PH_RELAY_PIN, isOn, name, phAdjusterState);
+            phAdjusterState = isOn;
+          } 
+          else if (deviceType == "light") {
+            updateRelay(LIGHT_RELAY_PIN, isOn, name, lightState);
+            lightState = isOn;
+          }
+        }
+      }
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+    
+    http.end();
+  } else {
+    Serial.println("WiFi Disconnected");
+    // Attempt to reconnect
+    WiFi.begin(ssid, password);
+  }
+}
+
+void updateRelay(int relayPin, bool isOn, String deviceName, bool currentState) {
+  // Check if state has changed to avoid unnecessary updates
+  if (currentState != isOn) {
+    // NOTE: Most relay modules are active LOW, meaning:
+    // LOW = relay ON, HIGH = relay OFF
+    // Adjust based on your specific relay module
+    
+    digitalWrite(relayPin, isOn ? LOW : HIGH);
+    
+    Serial.print(deviceName);
+    Serial.print(" is now ");
+    Serial.println(isOn ? "ON" : "OFF");
+  }
+}
+
+// Optional: Add a function to manually trigger a device status update
+void manualUpdateDevice(String deviceId, bool newState) {
+  if (WiFi.status() == WL_CONNECTED) {
+    WiFiClient client;
+    HTTPClient http;
+    
+    String url = String(supabaseUrl) + "/rest/v1/devices?id=eq." + deviceId;
+    
+    http.begin(client, url);
+    http.addHeader("apikey", supabaseKey);
+    http.addHeader("Authorization", "Bearer " + String(supabaseKey));
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Prefer", "return=minimal");
+    
+    // Create JSON body
+    String jsonBody = "{";
+    jsonBody += "\\\"is_on\\\": " + String(newState ? "true" : "false") + ",";
+    jsonBody += "\\\"last_updated\\\": \\\"" + String(getCurrentTimestamp()) + "\\\"";
+    jsonBody += "}";
+    
+    int httpResponseCode = http.PATCH(jsonBody);
+    
+    if (httpResponseCode > 0) {
+      Serial.println("Update HTTP Response code: " + String(httpResponseCode));
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+    
+    http.end();
+  }
+}
+
+// Helper function to get a timestamp (simplified example)
+String getCurrentTimestamp() {
+  // In a real implementation, you would use an NTP client to get the actual time
+  // This is just a placeholder
+  return "2025-04-07T12:00:00Z";
+}
+`} />
+
+            <div className="mt-4 p-3 border border-yellow-300 bg-yellow-50 rounded-md text-sm">
+              <h4 className="font-medium text-amber-800">Important Notes:</h4>
+              <ul className="list-disc pl-5 mt-2 space-y-1 text-amber-700">
+                <li>Most relay modules are <b>active LOW</b> (LOW = ON, HIGH = OFF)</li>
+                <li>Ensure your ESP8266 has a stable power supply that can handle relay activation</li>
+                <li>Consider adding a capacitor across the power supply to prevent voltage drops</li>
+                <li>Use optocouplers or isolation between ESP8266 and relay circuits for safety</li>
+                <li>Add the Supabase anon key from your project dashboard</li>
+              </ul>
+            </div>
           </TabsContent>
           
           <TabsContent value="api">

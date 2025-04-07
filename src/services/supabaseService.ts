@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Json } from "@/integrations/supabase/types";
 
 // Types
 export type Crop = {
@@ -27,6 +28,14 @@ export type Device = {
   last_updated: string;
 };
 
+export type SensorStatus = {
+  airTemp: "normal" | "warning" | "critical";
+  waterTemp: "normal" | "warning" | "critical";
+  humidity: "normal" | "warning" | "critical";
+  ph: "normal" | "warning" | "critical";
+  tds: "normal" | "warning" | "critical";
+};
+
 export type SensorReading = {
   id: string;
   air_temp: number;
@@ -34,14 +43,9 @@ export type SensorReading = {
   humidity: number;
   ph: number;
   tds: number;
-  status: {
-    airTemp: "normal" | "warning" | "critical";
-    waterTemp: "normal" | "warning" | "critical";
-    humidity: "normal" | "warning" | "critical";
-    ph: "normal" | "warning" | "critical";
-    tds: "normal" | "warning" | "critical";
-  };
+  status: SensorStatus;
   created_at: string;
+  crop_id?: string;
 };
 
 export type Alert = {
@@ -69,7 +73,7 @@ export const useCrops = () => {
   });
 };
 
-// Fetch latest sensor readings
+// Fetch latest sensor reading
 export const useLatestSensorReading = () => {
   return useQuery({
     queryKey: ['sensorReading', 'latest'],
@@ -81,7 +85,18 @@ export const useLatestSensorReading = () => {
         .limit(1);
       
       if (error) throw error;
-      return data && data.length > 0 ? data[0] as SensorReading : null;
+      
+      if (data && data.length > 0) {
+        // Convert JSON status to proper SensorStatus type
+        const reading = data[0];
+        const typedReading: SensorReading = {
+          ...reading,
+          status: reading.status as unknown as SensorStatus
+        };
+        return typedReading;
+      }
+      
+      return null;
     },
     refetchInterval: 2000, // Poll every 2 seconds
   });
@@ -99,7 +114,12 @@ export const useHistoricalReadings = (limit = 24) => {
         .limit(limit);
       
       if (error) throw error;
-      return data as SensorReading[];
+      
+      // Convert JSON status to proper SensorStatus type for each reading
+      return data.map(reading => ({
+        ...reading,
+        status: reading.status as unknown as SensorStatus
+      })) as SensorReading[];
     },
   });
 };
@@ -314,13 +334,8 @@ export const useAddSensorReading = () => {
     humidity: number;
     ph: number;
     tds: number;
-    status: {
-      airTemp: "normal" | "warning" | "critical";
-      waterTemp: "normal" | "warning" | "critical";
-      humidity: "normal" | "warning" | "critical";
-      ph: "normal" | "warning" | "critical";
-      tds: "normal" | "warning" | "critical";
-    };
+    status: SensorStatus;
+    crop_id?: string;
   };
   
   return useMutation({
@@ -332,7 +347,11 @@ export const useAddSensorReading = () => {
         .single();
       
       if (error) throw error;
-      return data as SensorReading;
+      
+      return {
+        ...data,
+        status: data.status as unknown as SensorStatus
+      } as SensorReading;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sensorReading', 'latest'] });
