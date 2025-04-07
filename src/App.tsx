@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ESPDownload from "./components/ESPDownload";
 import { useEffect } from "react";
+import './App.css';
 
 // Create a new query client with retry configuration to avoid infinite loading
 const queryClient = new QueryClient({
@@ -23,6 +24,11 @@ const queryClient = new QueryClient({
 const App = () => {
   useEffect(() => {
     console.log("App component mounted");
+    
+    // Check if Tailwind is loaded properly
+    const isTailwindLoaded = document.documentElement.classList.contains('js') ||
+      typeof window.__TAILWIND_CONFIG !== 'undefined';
+    console.log("Tailwind loaded:", isTailwindLoaded);
   }, []);
 
   return (

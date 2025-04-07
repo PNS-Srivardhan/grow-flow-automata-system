@@ -14,22 +14,28 @@ const handleError = (error: Error) => {
         <h2>Application Error</h2>
         <p>Something went wrong loading the application. Please check the console for more details.</p>
         <pre>${error.message}</pre>
+        <p>Stack trace:</p>
+        <pre>${error.stack}</pre>
       </div>
     `;
   }
 };
 
-try {
-  console.log('Initializing application...');
-  const rootElement = document.getElementById("root");
-  
-  if (!rootElement) {
-    throw new Error('Could not find root element');
+// Initialize Tailwind properly
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    console.log('Initializing application...');
+    const rootElement = document.getElementById("root");
+    
+    if (!rootElement) {
+      throw new Error('Could not find root element');
+    }
+    
+    const root = createRoot(rootElement);
+    root.render(<App />);
+    console.log('Application rendered successfully');
+  } catch (error) {
+    console.error('Failed to initialize application:', error);
+    handleError(error as Error);
   }
-  
-  const root = createRoot(rootElement);
-  root.render(<App />);
-  console.log('Application rendered successfully');
-} catch (error) {
-  handleError(error as Error);
-}
+});
